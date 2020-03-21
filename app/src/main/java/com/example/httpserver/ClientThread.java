@@ -2,6 +2,7 @@ package com.example.httpserver;
 
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
@@ -20,17 +21,20 @@ import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.Semaphore;
 
 public class ClientThread extends Thread {
 
     Socket s;
     String msg;
-    private static MainActivity mainActivity;
+    Handler myHandler;
+    Semaphore sem;
 
-    public ClientThread(Socket s) {
+    public ClientThread(Socket s, Handler h, Semaphore se) {
         this.s = s;
         // Gets a handle to the object that creates the thread pools
-        mainActivity = MainActivity.getInstance();
+        myHandler = h;
+        sem = se;
     }
 
     @Override
@@ -64,7 +68,7 @@ public class ClientThread extends Thread {
             //TODO zobrazení obrazku a ruzncyh file typu
             if(file.exists()){
                 if(file.isFile()) {
-                    if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+                    if (path.endsWith(".png") || path.endsWith(".jpg")) {
                         out.write("HTTP/1.0 200 OK\n" +
                                 "Content-Type: " + getFileType(path) + "\n"+
                                 "Content-Length: " + file.length() + "\n" +
@@ -78,7 +82,8 @@ public class ClientThread extends Thread {
 
                         FileInputStream fileInputStream = new FileInputStream(file);
                         byte[] fileBytes = new byte[2048];
-                        while (fileInputStream.read(fileBytes) != 0) {
+                        int i;
+                        while ((i = fileInputStream.read(fileBytes)) != 0) {
                             o.write(fileBytes);
                         }
                         o.flush();
@@ -104,7 +109,8 @@ public class ClientThread extends Thread {
                 }
                 else{ //vypíše obsah složky sdcard
 
-                    File directory = new File(pathSd +"/");
+                    String pathD = pathSd + uri;
+                    File directory = new File(pathD +"/");
                     File[] files = directory.listFiles();
 
                     String resultList = "";
@@ -113,10 +119,12 @@ public class ClientThread extends Thread {
                             "\n" +
                             "<html>\n" +
                             "<body>\n");
+                    resultList += "<ul>\n";
                     for(int i = 0; i < files.length; i++)
                     {
-                        resultList += "<h2>" + files[i].getName()+ "</h2>\n";
+                        resultList += "<li><a href="+("/"+files[i].getName())+">"+files[i].getName()+"</a></li>";
                     }
+                    resultList += "</ul>\n";
                     resultList += "</body>\n" +
                             "</html>";
                     out.write(resultList);
@@ -152,6 +160,9 @@ public class ClientThread extends Thread {
             Log.d("SRV", "Error");
             e.printStackTrace();
         }
+        finally {
+            sem.release();
+        }
     }
     public static String getFileType(String url) {
         String type = null;
@@ -163,24 +174,15 @@ public class ClientThread extends Thread {
         return type;
     }
 
-
-    // Passes the state to MainActivity
-    /*void handleState(int state) {
-
-        Message mes = new Message();
-        mes.obj = this;
-        mainActivity.handler.handleMessage(mes);
-    }*/
-
     public String getMsg(){
         return msg;
     }
 
         private void sendMsg(String m){
-            Message ms = MainActivity.myHandler.obtainMessage();
+            Message ms = myHandler.obtainMessage();
             Bundle bundle = new Bundle();
             bundle.putCharSequence("MAINLIST", m);
             ms.setData(bundle);
-            MainActivity.myHandler.sendMessage(ms);
+            myHandler.sendMessage(ms);
         }
 }

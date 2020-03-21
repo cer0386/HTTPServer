@@ -5,85 +5,57 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Array;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private SocketServer s;
     private static final int READ_EXTERNAL_STORAGE = 1;
 
+    private Camera mCamera;
+    private CameraPreview mPreview;
+
     static final int TASK_COMPLETE = 4;
     private TextView tv1;
-    private static MainActivity sInstance = null;
-    //public Handler handler;
+    int permits;
 
-    static {
-
-        // Creates a single static instance of MainActivity
-        sInstance = new MainActivity();
-    }
-
-    public static Handler myHandler = new Handler(){
+    public  Handler myHandler = new Handler(){
         @Override
         public void handleMessage(Message msg) {
             // TODO Auto-generated method stub
             super.handleMessage(msg);
-            Log.d("SRV", msg.getData().getCharSequence("MAINLIST").toString());
-            //MainActivity.getInstance().setContentView(msg);
+            CharSequence m = msg.getData().getCharSequence("MAINLIST").toString();
+            Log.d("SRV", m.toString());
+
+
+            tv1.append(m);
+            tv1.append("\n");
         }
     };
 
-
-    public void setContentView(Message msg){
-        //tv1 = (TextView) findViewById(R.id.textView);
-        tv1.setText(msg.obj.toString());
-    }
-    /*private MainActivity () {
-        handler = new Handler(Looper.getMainLooper()) {
-            @Override
-            public void handleMessage(Message inputMessage) {
-                TextView tv1 = findViewById(R.id.textView);
-                //Get clientThread task, from incoming message object
-                ClientThread clientThread = (ClientThread) inputMessage.obj;
-                String sMsg = clientThread.msg;
-                tv1.setText(sMsg);
-            }
-        };
-    }*/
-
-    /*public void handleState(ClientThread cT, int state){
-        switch (state){
-            case TASK_COMPLETE:
-
-                String zprava = cT.getMsg();
-                //Message completeMessage = handler.obtainMessage(state, cT);
-                Message completeMessage = new Message();
-                completeMessage.obj = cT;
-                //tv1.setText(zprava);
-                //completeMessage.sendToTarget();
-                MainActivity.getInstance().handler.handleMessage(completeMessage);
-                break;
-            // In all other cases, pass along the message without any other action.
-            default:
-                handler.obtainMessage(state, cT).sendToTarget();
-                break;
-        }
-    }*/
-
-    public static MainActivity getInstance(){
-        return sInstance;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,22 +68,61 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         btn1.setOnClickListener(this);
         btn2.setOnClickListener(this);
+        tv1.setMovementMethod(new ScrollingMovementMethod());
+        tv1.setText("DATA TRANSMITTED \n");
 
-        /*handler = new Handler(Looper.getMainLooper()) {
-            @Override
-            public void handleMessage(Message inputMessage) {
-                //Get clientThread task, from incoming message object
-                ClientThread clientThread = (ClientThread) inputMessage.obj;
-                String sMsg = clientThread.getMsg();
-                tv1.setText(sMsg);
-                Log.d("SRV", "handleMessage: " + sMsg);
 
-            }
-        };*/
+        mCamera = getCameraInstance();
+
+        // Create our Preview view and set it as the content of our activity.
+        mPreview = new CameraPreview(this, mCamera);
+        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview.addView(mPreview);
+
+        Button captureButton = (Button) findViewById(R.id.button_capture);
+        captureButton.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        // get an image from the camera
+                        mCamera.startPreview();
+                        mCamera.takePicture(null, null, mPicture);
+                    }
+                }
+        );
+
     }
+    private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+
+            String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
+            File pictureFile = new File(pathSd +"/Pictures/aaa.jpeg");
+            if (pictureFile == null){
+                Log.d("PIC", "Error creating media file, check storage permissions");
+                return;
+            }
+
+            try {
+                FileOutputStream fos = new FileOutputStream(pictureFile);
+                fos.write(data);
+                fos.close();
+            } catch (FileNotFoundException e) {
+                Log.d("PIC", "File not found: " + e.getMessage());
+            } catch (IOException e) {
+                Log.d("PIC", "Error accessing file: " + e.getMessage());
+            }
+        }
+    };
+
+
 
     @Override
     public void onClick(View v) {
+
+        EditText tv2 = findViewById(R.id.clientsNumber);
+        permits = Integer.parseInt(tv2.getText().toString());
 
         if (v.getId() == R.id.button1) {
 
@@ -122,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 ActivityCompat.requestPermissions(
                         this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
             } else {
-                s = new SocketServer();
+                s = new SocketServer(myHandler, permits);
                 s.start();
             }
         }
@@ -142,7 +153,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             case READ_EXTERNAL_STORAGE:
                 if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    s = new SocketServer();
+                    s = new SocketServer(myHandler, permits);
                     s.start();
                 }
                 break;
@@ -151,6 +162,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
+    /** A safe way to get an instance of the Camera object. */
+    public static Camera getCameraInstance(){
+        Camera c = null;
+        try {
+            c = Camera.open(); // attempt to get a Camera instance
+        }
+        catch (Exception e){
+            // Camera is not available (in use or does not exist)
+        }
+        return c; // returns null if camera is unavailable
+    }
+
+
 
 
 
