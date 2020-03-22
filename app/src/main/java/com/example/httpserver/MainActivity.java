@@ -29,6 +29,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -41,6 +43,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     static final int TASK_COMPLETE = 4;
     private TextView tv1;
     int permits;
+    Timer t;
+    boolean run;
 
     public  Handler myHandler = new Handler(){
         @Override
@@ -85,11 +89,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     @Override
                     public void onClick(View v) {
                         // get an image from the camera
-                        mCamera.startPreview();
-                        mCamera.takePicture(null, null, mPicture);
+                        t = new Timer();
+                        TimerTask timerTask= new TimerTask() {
+                            @Override
+                            public void run() {
+                                mCamera.startPreview();
+                                mCamera.takePicture(null, null, mPicture);
+                            }
+                        };
+                        t.schedule(timerTask, 500);
                     }
                 }
         );
+
+        Button stopButton = (Button) findViewById(R.id.button_stop);
+        stopButton.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+
+                        t.cancel();
+                    }
+                }
+        );
+
 
     }
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {

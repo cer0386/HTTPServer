@@ -72,4 +72,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             Log.d("PIC", "Error starting camera preview: " + e.getMessage());
         }
     }
+
+
 }

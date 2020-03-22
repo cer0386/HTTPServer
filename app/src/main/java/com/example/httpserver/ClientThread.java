@@ -47,6 +47,7 @@ public class ClientThread extends Thread {
 
             String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
             String sdPath = pathSd + "/OSMZ";
+            String sdPicPath = pathSd +"/Pictures";
             Log.d("SRV", "absolute path: " + sdPath);
 
             String tmp = in.readLine();
@@ -68,7 +69,7 @@ public class ClientThread extends Thread {
             //TODO zobrazení obrazku a ruzncyh file typu
             if(file.exists()){
                 if(file.isFile()) {
-                    if (path.endsWith(".png") || path.endsWith(".jpg")) {
+                    if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
                         out.write("HTTP/1.0 200 OK\n" +
                                 "Content-Type: " + getFileType(path) + "\n"+
                                 "Content-Length: " + file.length() + "\n" +
@@ -138,17 +139,58 @@ public class ClientThread extends Thread {
                 }
             }
 
+
             else{
-                out.write("HTTP/1.0 404 Not Found \n" +
-                        "Content-Type: text/html\n" +
-                        "\n" +
-                        "<html>\n" +
-                        "<body>\n" +
-                        "<h1>404 Not Found</h1>");
-                out.flush();
-                msg = "Not found";
-                //handleState(mainActivity.TASK_COMPLETE);
-                sendMsg(msg);
+                path = pathSd + uri;
+                file = new File(path);
+                if(file.exists()){
+                    if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+                        out.write("HTTP/1.0 200 OK\n" +
+                                "Content-Type: " + getFileType(path) + "\n"+
+                                "Content-Length: " + file.length() + "\n" +
+                                "\n");
+                        out.flush();
+
+                        msg = "URI : "+ uri + "\n Content type: "+ getFileType(path) +"\n Size: "+file.length();
+                        //handleState(mainActivity.TASK_COMPLETE);
+                        sendMsg(msg);
+
+                        FileInputStream fileInputStream = new FileInputStream(file);
+                        byte[] fileBytes = new byte[2048];
+                        int i;
+                        while ((i = fileInputStream.read(fileBytes)) != 0) {
+                            o.write(fileBytes,0,i);
+                        }
+                        o.flush();
+                    }
+                }
+                else{
+                    //TODO Content length je asi špatný, padá appka a někdy nespadne ale nezobrazí nic
+                    if(uri.equals("/stream.html")){
+                        path = pathSd + "/Pictures/aaa.jpeg";
+                        file = new File(path);
+                        out.write("HTTP/1.0 200 OK\n" +
+                                "Content-Type: text/html\n"+
+                                "Content-Length: " + file.length() + "\n" +
+                                "\n"+
+                                "<body>\n" +
+                                "TESTING\n"+
+                                "<img src=\"Pictures/aaa.jpeg\">");
+                        out.flush();
+                    }
+                    else {
+                        out.write("HTTP/1.0 404 Not Found \n" +
+                                "Content-Type: text/html\n" +
+                                "\n" +
+                                "<html>\n" +
+                                "<body>\n" +
+                                "<h1>404 Not Found</h1>");
+                        out.flush();
+                        msg = "Not found";
+                        //handleState(mainActivity.TASK_COMPLETE);
+                        sendMsg(msg);
+                    }
+                }
             }
 
             s.close();
