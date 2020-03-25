@@ -48,7 +48,7 @@ public class ClientThread extends Thread {
             String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
             String sdPath = pathSd + "/OSMZ";
             String sdPicPath = pathSd +"/Pictures";
-            Log.d("SRV", "absolute path: " + sdPath);
+            //Log.d("SRV", "absolute path: " + sdPath);
 
             String tmp = in.readLine();
             String[] pole;
@@ -58,6 +58,17 @@ public class ClientThread extends Thread {
             {
                 pole = tmp.split("[\\s+]");
                 uri = pole[1];
+            }
+            if(uri.contains("?rand")){
+                Log.d("SRV", "URI BEFORE: -" + uri + "-");
+                StringBuilder temp = new StringBuilder();
+                for (char c : uri.toCharArray()) {
+                    if(c == '?'){
+                        break;
+                    }
+                    temp.append(c);
+                }
+                uri = temp.toString();
             }
 
             Log.d("SRV", "URI: -" + uri + "-");
@@ -159,26 +170,12 @@ public class ClientThread extends Thread {
                         byte[] fileBytes = new byte[2048];
                         int i;
                         while ((i = fileInputStream.read(fileBytes)) != 0) {
-                            o.write(fileBytes,0,i);
+                            o.write(fileBytes);
                         }
                         o.flush();
                     }
                 }
                 else{
-                    //TODO Content length je asi špatný, padá appka a někdy nespadne ale nezobrazí nic
-                    if(uri.equals("/stream.html")){
-                        path = pathSd + "/Pictures/aaa.jpeg";
-                        file = new File(path);
-                        out.write("HTTP/1.0 200 OK\n" +
-                                "Content-Type: text/html\n"+
-                                "Content-Length: " + file.length() + "\n" +
-                                "\n"+
-                                "<body>\n" +
-                                "TESTING\n"+
-                                "<img src=\"Pictures/aaa.jpeg\">");
-                        out.flush();
-                    }
-                    else {
                         out.write("HTTP/1.0 404 Not Found \n" +
                                 "Content-Type: text/html\n" +
                                 "\n" +
@@ -189,7 +186,6 @@ public class ClientThread extends Thread {
                         msg = "Not found";
                         //handleState(mainActivity.TASK_COMPLETE);
                         sendMsg(msg);
-                    }
                 }
             }
 

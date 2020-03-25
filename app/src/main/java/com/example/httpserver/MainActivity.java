@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView tv1;
     int permits;
     Timer t;
+    TimerTask timerTask;
     boolean run;
 
     public  Handler myHandler = new Handler(){
@@ -90,14 +91,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void onClick(View v) {
                         // get an image from the camera
                         t = new Timer();
-                        TimerTask timerTask= new TimerTask() {
+
+                        timerTask= new TimerTask() {
                             @Override
                             public void run() {
+
                                 mCamera.startPreview();
                                 mCamera.takePicture(null, null, mPicture);
+                                Log.d("PIC", "logujem");
+
                             }
                         };
-                        t.schedule(timerTask, 500);
+
+                        //t.schedule(timerTask, 5000);
+                        t.scheduleAtFixedRate(timerTask, 0, 5000);
                     }
                 }
         );
