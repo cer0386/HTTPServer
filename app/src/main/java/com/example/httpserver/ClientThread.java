@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 
 import static com.example.httpserver.MainActivity.picture;
@@ -45,7 +46,7 @@ public class ClientThread extends Thread {
 
             String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
             String sdPath = pathSd + "/OSMZ";
-            String sdPicPath = pathSd +"/Pictures";
+            //String sdPicPath = pathSd +"/Pictures";
             //Log.d("SRV", "absolute path: " + sdPath);
 
             String tmp = in.readLine();
@@ -70,13 +71,87 @@ public class ClientThread extends Thread {
             }
 
             Log.d("SRV", "URI: -" + uri + "-");
-            String path = sdPath+uri;
+            String path = sdPath+uri; //Cela cesta k souboru
 
 
             File file = new File(path);
             Log.d("SRV", "file: " + file.getAbsolutePath() + " exists: "+file.exists());
 
-            if(uri.equals("/camera/snapshot") && picture != null){
+
+            if(uri.startsWith("/cgi-bin/")){
+
+                String[] cmd = uri.substring("/cgi-bin/".length()).split("%");
+                String temp = "";
+
+                if(cmd.length > 1){
+                    String[] params = Arrays.copyOfRange(cmd, 1, cmd.length);
+
+                    StringBuilder tempB = new StringBuilder();
+                    for(int i = 0; i < params.length; i++){
+                        tempB.append(params[i]);
+                        tempB.append(",");
+                    }
+                    temp = tempB.toString();
+                    temp = temp.substring(0, temp.length() -1);
+                    Log.d("PROC", "Argument: " + temp);
+                }
+
+                try{
+                    ProcessBuilder pb;
+                    if(cmd.length > 1){
+                        pb = new ProcessBuilder(cmd[0], temp);
+                    }
+                    else{
+                        pb = new ProcessBuilder(cmd);
+                    }
+
+                    final Process p = pb.start();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    out.write("HTTP/1.0 200 OK\n" +
+                            "Content-Type: text/html\n" +
+                            "\n" +
+                            "<html>"+
+                            "<body>"+
+                            "<h1>Vypis CGI skriptu " + uri+"</h1>");
+                    out.flush();
+
+                    String line;
+                    boolean swap = false;
+                    while ((line = br.readLine())!=null){
+                        if(swap){
+                            out.write( "<p>"+ line + "<p/>\n");
+                            swap = false;
+                        }
+                        else{
+                            out.write( "<p><b>"+ line + "</b><p/>\n");
+                            swap = true;
+                        }
+                    }
+                    out.flush();
+
+                    out.write("</body>\n" +
+                            "</html>");
+                    out.flush();
+
+                }
+                catch (Exception e){
+                    Log.d("PROC", "Exception: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+            else if(uri.equals("camera/stream") ){
+                out.write("HTTP/1.0 200 OK\n" +
+                        "Content-Type: multipart/x-mixed-replace; boundary=\"OSMZ_boundary\"\n" +
+                        //"Content-Length: " + picture.length + "\n" +
+                        "\n");
+
+                msg = "URI : " + uri + "\n Content type: multipart/x-mixed-replace\n Size: " + picture.length;
+                Log.d("PIC", "MJPEG STREAM...");
+                sendMsg(msg);
+
+                out.flush();
+            }
+            else if(uri.equals("/camera/snapshot") && picture != null){
                 out.write("HTTP/1.0 200 OK\n" +
                         "Content-Type: image/jpeg\n" +
                         "Content-Length: " + picture.length + "\n" +
@@ -99,7 +174,7 @@ public class ClientThread extends Thread {
             else {
                 if (file.exists()) {
                     if (file.isFile()) {
-                        if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+                        if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) { // čistě obrázek
                             out.write("HTTP/1.0 200 OK\n" +
                                     "Content-Type: " + getFileType(path) + "\n" +
                                     "Content-Length: " + file.length() + "\n" +
@@ -137,7 +212,8 @@ public class ClientThread extends Thread {
                         out.flush();
                         reader.close();
 
-                    } else { //vypíše obsah složky sdcard
+                    }
+                    else { //vypíše obsah složky sdcard
 
                         String pathD = pathSd + uri;
                         File directory = new File(pathD + "/");
@@ -152,6 +228,7 @@ public class ClientThread extends Thread {
                         resultList += "<ul>\n";
                         for (int i = 0; i < files.length; i++) {
                             resultList += "<li><a href=" + ("/" + files[i].getName()) + ">" + files[i].getName() + "</a></li>";
+                            Log.d("TST", "Name: "+files[i].getName());
                         }
                         resultList += "</ul>\n";
                         resultList += "</body>\n" +
@@ -165,7 +242,8 @@ public class ClientThread extends Thread {
 
                         Log.d("List", resultList);
                     }
-                } else {
+                }
+                else { // jestli ten obrázek je jinde než v /sdcard/OSMZ/...
                     path = pathSd + uri;
                     file = new File(path);
                     if (file.exists()) {
@@ -188,17 +266,46 @@ public class ClientThread extends Thread {
                             }
                             o.flush();
                         }
-                    } else {
-                        out.write("HTTP/1.0 404 Not Found \n" +
-                                "Content-Type: text/html\n" +
-                                "\n" +
-                                "<html>\n" +
-                                "<body>\n" +
-                                "<h1>404 Not Found</h1>");
-                        out.flush();
-                        msg = "Not found";
-                        //handleState(mainActivity.TASK_COMPLETE);
-                        sendMsg(msg);
+                        else{
+                            String pathD = pathSd + uri;
+                            File directory = new File(pathD + "/");
+                            File[] files = directory.listFiles();
+                            String resultList = "";
+                            out.write("HTTP/1.0 200 OK\n" +
+                                    "Content-Type: text/html\n" +
+                                    "\n" +
+                                    "<html>\n" +
+                                    "<body>\n");
+                            resultList += "<ul>\n";
+                            for (int i = 0; i < files.length; i++) {
+                                resultList += "<li><a href=" + ("/" + files[i].getName()) + ">" + files[i].getName() + "</a></li>";
+                                Log.d("TST", "Name: "+files[i].getName());
+                            }
+                            resultList += "</ul>\n";
+                            resultList += "</body>\n" +
+                                    "</html>";
+                            out.write(resultList);
+                            out.flush();
+
+                            msg = "Directory";
+                            //handleState(mainActivity.TASK_COMPLETE);
+                            sendMsg(msg);
+                        }
+                    }
+                    else {
+
+                            out.write("HTTP/1.0 404 Not Found \n" +
+                                    "Content-Type: text/html\n" +
+                                    "\n" +
+                                    "<html>\n" +
+                                    "<body>\n" +
+                                    "<h1>404 Not Found</h1>" +
+                                    "</body>" +
+                                    "</html>");
+                            out.flush();
+                            msg = "Not found";
+                            sendMsg(msg);
+
                     }
                 }
             }

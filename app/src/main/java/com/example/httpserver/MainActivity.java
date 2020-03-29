@@ -110,15 +110,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         );
 
         Button stopButton = (Button) findViewById(R.id.button_stop);
-        stopButton.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
 
-                        t.cancel();
+            stopButton.setOnClickListener(
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+
+                            if(t !=null) {
+                                t.cancel();
+                            }
+                        }
                     }
-                }
-        );
+            );
 
 
     }
@@ -127,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
 
+            //přes SD kartu
             /*String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
             File pictureFile = new File(pathSd +"/Pictures/aaa.jpeg");
             if (pictureFile == null){
