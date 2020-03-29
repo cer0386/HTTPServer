@@ -6,11 +6,9 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
@@ -18,10 +16,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.concurrent.Semaphore;
+
+import static com.example.httpserver.MainActivity.picture;
 
 public class ClientThread extends Thread {
 
@@ -76,106 +74,121 @@ public class ClientThread extends Thread {
 
 
             File file = new File(path);
-            Log.d("SRV", "file: " + file.getAbsolutePath() + " exists: "+file.exists() + " path: " +file.getPath());
-            //TODO zobrazení obrazku a ruzncyh file typu
-            if(file.exists()){
-                if(file.isFile()) {
-                    if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
-                        out.write("HTTP/1.0 200 OK\n" +
-                                "Content-Type: " + getFileType(path) + "\n"+
-                                "Content-Length: " + file.length() + "\n" +
-                                "\n");
-                        out.flush();
+            Log.d("SRV", "file: " + file.getAbsolutePath() + " exists: "+file.exists());
 
-                        msg = "URI : "+ uri + "\n Content type: "+ getFileType(path) +"\n Size: "+file.length();
-                        //handleState(mainActivity.TASK_COMPLETE);
-                        sendMsg(msg);
+            if(uri.equals("/camera/snapshot") && picture != null){
+                out.write("HTTP/1.0 200 OK\n" +
+                        "Content-Type: image/jpeg\n" +
+                        "Content-Length: " + picture.length + "\n" +
+                        "\n");
+                out.flush();
 
+                msg = "URI : " + uri + "\n Content type: image/jpeg \n Size: " + picture.length;
+                sendMsg(msg);
 
-                        FileInputStream fileInputStream = new FileInputStream(file);
-                        byte[] fileBytes = new byte[2048];
-                        int i;
-                        while ((i = fileInputStream.read(fileBytes)) != 0) {
-                            o.write(fileBytes);
-                        }
-                        o.flush();
-                    }
-                    BufferedReader reader;
-                    reader = new BufferedReader( new FileReader(file));
-                    String line;
-                    out.write("HTTP/1.0 200 OK\n" +
-                            "Content-Type: text/html\n"+
-                            "\n");
-                    out.flush();
+                ByteArrayInputStream bai = new ByteArrayInputStream(picture);
 
-                    msg = "URI : "+ uri + "\n Content type: "+ getFileType(path) +"\n Size: "+file.length();
-                    //handleState(mainActivity.TASK_COMPLETE);
-                    sendMsg(msg);
-
-                    while((line = reader.readLine()) != null){
-                        out.write(line+"\n");
-                    }
-                    out.flush();
-                    reader.close();
-
+                int ch;
+                while((ch = bai.read()) != -1)
+                {
+                    o.write(picture);
                 }
-                else{ //vypíše obsah složky sdcard
 
-                    String pathD = pathSd + uri;
-                    File directory = new File(pathD +"/");
-                    File[] files = directory.listFiles();
-
-                    String resultList = "";
-                    out.write("HTTP/1.0 200 OK\n" +
-                            "Content-Type: text/html\n" +
-                            "\n" +
-                            "<html>\n" +
-                            "<body>\n");
-                    resultList += "<ul>\n";
-                    for(int i = 0; i < files.length; i++)
-                    {
-                        resultList += "<li><a href="+("/"+files[i].getName())+">"+files[i].getName()+"</a></li>";
-                    }
-                    resultList += "</ul>\n";
-                    resultList += "</body>\n" +
-                            "</html>";
-                    out.write(resultList);
-                    out.flush();
-
-                    msg = "Directory";
-                    //handleState(mainActivity.TASK_COMPLETE);
-                    sendMsg(msg);
-
-                    Log.d("List", resultList);
-                }
+                o.flush();
             }
+            else {
+                if (file.exists()) {
+                    if (file.isFile()) {
+                        if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+                            out.write("HTTP/1.0 200 OK\n" +
+                                    "Content-Type: " + getFileType(path) + "\n" +
+                                    "Content-Length: " + file.length() + "\n" +
+                                    "\n");
+                            out.flush();
+
+                            msg = "URI : " + uri + "\n Content type: " + getFileType(path) + "\n Size: " + file.length();
+                            //handleState(mainActivity.TASK_COMPLETE);
+                            sendMsg(msg);
 
 
-            else{
-                path = pathSd + uri;
-                file = new File(path);
-                if(file.exists()){
-                    if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+                            FileInputStream fileInputStream = new FileInputStream(file);
+                            byte[] fileBytes = new byte[2048];
+                            int i;
+                            while ((i = fileInputStream.read(fileBytes)) != 0) {
+                                o.write(fileBytes);
+                            }
+                            o.flush();
+                        }
+                        BufferedReader reader;
+                        reader = new BufferedReader(new FileReader(file));
+                        String line;
                         out.write("HTTP/1.0 200 OK\n" +
-                                "Content-Type: " + getFileType(path) + "\n"+
-                                "Content-Length: " + file.length() + "\n" +
+                                "Content-Type: text/html\n" +
                                 "\n");
                         out.flush();
 
-                        msg = "URI : "+ uri + "\n Content type: "+ getFileType(path) +"\n Size: "+file.length();
+                        msg = "URI : " + uri + "\n Content type: " + getFileType(path) + "\n Size: " + file.length();
                         //handleState(mainActivity.TASK_COMPLETE);
                         sendMsg(msg);
 
-                        FileInputStream fileInputStream = new FileInputStream(file);
-                        byte[] fileBytes = new byte[2048];
-                        int i;
-                        while ((i = fileInputStream.read(fileBytes)) != 0) {
-                            o.write(fileBytes);
+                        while ((line = reader.readLine()) != null) {
+                            out.write(line + "\n");
                         }
-                        o.flush();
+                        out.flush();
+                        reader.close();
+
+                    } else { //vypíše obsah složky sdcard
+
+                        String pathD = pathSd + uri;
+                        File directory = new File(pathD + "/");
+                        File[] files = directory.listFiles();
+
+                        String resultList = "";
+                        out.write("HTTP/1.0 200 OK\n" +
+                                "Content-Type: text/html\n" +
+                                "\n" +
+                                "<html>\n" +
+                                "<body>\n");
+                        resultList += "<ul>\n";
+                        for (int i = 0; i < files.length; i++) {
+                            resultList += "<li><a href=" + ("/" + files[i].getName()) + ">" + files[i].getName() + "</a></li>";
+                        }
+                        resultList += "</ul>\n";
+                        resultList += "</body>\n" +
+                                "</html>";
+                        out.write(resultList);
+                        out.flush();
+
+                        msg = "Directory";
+                        //handleState(mainActivity.TASK_COMPLETE);
+                        sendMsg(msg);
+
+                        Log.d("List", resultList);
                     }
-                }
-                else{
+                } else {
+                    path = pathSd + uri;
+                    file = new File(path);
+                    if (file.exists()) {
+                        if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+                            out.write("HTTP/1.0 200 OK\n" +
+                                    "Content-Type: " + getFileType(path) + "\n" +
+                                    "Content-Length: " + file.length() + "\n" +
+                                    "\n");
+                            out.flush();
+
+                            msg = "URI : " + uri + "\n Content type: " + getFileType(path) + "\n Size: " + file.length();
+                            //handleState(mainActivity.TASK_COMPLETE);
+                            sendMsg(msg);
+
+                            FileInputStream fileInputStream = new FileInputStream(file);
+                            byte[] fileBytes = new byte[2048];
+                            int i;
+                            while ((i = fileInputStream.read(fileBytes)) != 0) {
+                                o.write(fileBytes);
+                            }
+                            o.flush();
+                        }
+                    } else {
                         out.write("HTTP/1.0 404 Not Found \n" +
                                 "Content-Type: text/html\n" +
                                 "\n" +
@@ -186,6 +199,7 @@ public class ClientThread extends Thread {
                         msg = "Not found";
                         //handleState(mainActivity.TASK_COMPLETE);
                         sendMsg(msg);
+                    }
                 }
             }
 

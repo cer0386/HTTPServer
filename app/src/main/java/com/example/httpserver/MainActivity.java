@@ -29,6 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -45,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     int permits;
     Timer t;
     TimerTask timerTask;
-    boolean run;
+    static byte[] picture;
 
     public  Handler myHandler = new Handler(){
         @Override
@@ -98,13 +99,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                 mCamera.startPreview();
                                 mCamera.takePicture(null, null, mPicture);
-                                Log.d("PIC", "logujem");
 
                             }
                         };
 
                         //t.schedule(timerTask, 5000);
-                        t.scheduleAtFixedRate(timerTask, 0, 5000);
+                        t.scheduleAtFixedRate(timerTask, 0, 1000);
                     }
                 }
         );
@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
 
-            String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
+            /*String pathSd = Environment.getExternalStorageDirectory().getAbsolutePath();
             File pictureFile = new File(pathSd +"/Pictures/aaa.jpeg");
             if (pictureFile == null){
                 Log.d("PIC", "Error creating media file, check storage permissions");
@@ -142,7 +142,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Log.d("PIC", "File not found: " + e.getMessage());
             } catch (IOException e) {
                 Log.d("PIC", "Error accessing file: " + e.getMessage());
+            }*/
+
+            if(data == null)
+            {
+                return;
             }
+            picture = Arrays.copyOf(data, data.length);
         }
     };
 
