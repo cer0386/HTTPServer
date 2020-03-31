@@ -1,0 +1,3 @@
+﻿Testovací textový soubor
+
+OSMZ HTTP SERVER

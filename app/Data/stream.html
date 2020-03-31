@@ -1,0 +1,35 @@
+<html>
+<body>
+<h1>TEST stream</h1>
+ 
+<button onclick="startIt()" id="startB">Start</button>    
+<button onclick="stopIt()" id="stopB">Stop</button>   
+<span>
+    <img src="/camera/snapshot" id="id1" class="NO-CACHE" />
+</span>
+
+</body>
+</html>
+
+<script type="text/javascript">
+
+function pageLoad() {
+    var startButton = document.getElementById("start");
+
+    startButton.onclick = startIt;
+}
+var proc;
+
+function startIt(){
+    proc = setInterval(function stream() {
+        var image = document.getElementById('id1');
+        image.src = '/camera/snapshot?rand=' + Math.random();
+    }, 300);  
+}
+
+function stopIt(){
+    clearInterval(proc);
+
+}
+
+</script>   
