@@ -8,6 +8,6 @@
 #### Stream si lze prohlédnout na stránce stream.html, kde jsou také 2 tlačítka pro zahájení a ukončení prohlížení streamu.
 #### CGI skripty lze prohlížet v prohlížeči po zadání `/cgi-bin/` a příkaz s argumenty oddělenými `%` 
 ##### Testováno na příkazech `/cgi-bin/uptime` a `/cgi-bin/cat%/proc/cpuinfo`
-
-Nepodařilo se mi rozběhnout MJpeg a překlopit appku do podoby služby
+  
+Nepodařilo se mi rozběhnout MJpeg a překlopit appku do podoby služby  
 Roman Černý, **CER0386**
